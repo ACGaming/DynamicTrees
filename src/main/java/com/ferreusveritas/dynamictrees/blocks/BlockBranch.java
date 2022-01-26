@@ -28,11 +28,13 @@ import net.minecraft.block.state.BlockFaceShape;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.monster.EntityCreeper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Enchantments;
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemAxe;
 import net.minecraft.item.ItemStack;
@@ -71,7 +73,7 @@ public abstract class BlockBranch extends Block implements ITreePart, IFutureBre
 		super(material);
 		setUnlocalizedName(name);
 		setRegistryName(name);
-		setHarvestLevel("axe", 0);
+		//setHarvestLevel("axe", 0);
 	}
 
 	public IProperty<?>[] getIgnorableProperties() {
@@ -247,7 +249,7 @@ public abstract class BlockBranch extends Block implements ITreePart, IFutureBre
 		NodeExtState extStateMapper = new NodeExtState(cutPos);
 		analyse(blockState, world, cutPos, wholeTree ? null : signal.localRootDir, new MapSignal(extStateMapper));
 
-		// Analyze only part of the tree beyond the break point and calculate it's volume, then destroy the branches
+		// Analyze only part of the tree beyond the break point and calculate its volume, then destroy the branches
 		NodeNetVolume volumeSum = new NodeNetVolume();
 		NodeDestroyer destroyer = new NodeDestroyer(species);
 		destroyMode = EnumDestroyMode.HARVEST;
@@ -403,36 +405,51 @@ public abstract class BlockBranch extends Block implements ITreePart, IFutureBre
 		if (toolDir == null) {//Some rayTracing results can theoretically produce a face hit with no side designation.
 			toolDir = EnumFacing.DOWN;//Make everything better
 		}
-
-		//Do the actual destruction
-		BranchDestructionData destroyData = destroyBranchFromNode(world, cutPos, toolDir, false);
-
-		//Get all of the wood drops
-		ItemStack heldItem = entity.getHeldItemMainhand();
-		int fortune = EnchantmentHelper.getEnchantmentLevel(Enchantments.FORTUNE, heldItem);
-		float fortuneFactor = 1.0f + 0.25f * fortune;
-		float woodVolume = destroyData.woodVolume;// The amount of wood calculated from the body of the tree network
-		List<ItemStack> woodItems = getLogDrops(world, cutPos, destroyData.species, woodVolume * fortuneFactor);
-
-		if (entity.getActiveHand() == null) {//What the hell man? I trusted you!
-			entity.setActiveHand(EnumHand.MAIN_HAND);//Players do things with hands.
+		
+		if (entity.getHeldItem(EnumHand.MAIN_HAND).isEmpty()) {
+			world.spawnEntity(new EntityItem(world, cutPos.getX(), cutPos.getY(), cutPos.getZ(), new ItemStack(Items.STICK)));
 		}
-
-		float chance = 1.0f;
-		//Fire the block harvesting event.  For An-Sar's PrimalCore mod :)
-		if (entity instanceof EntityPlayer) {
-			chance = net.minecraftforge.event.ForgeEventFactory.fireBlockHarvesting(woodItems, world, cutPos, state, fortune, chance, false, (EntityPlayer) entity);
+		
+		int currentRadius = this.getRadius(state);
+		IBlockState stateAbove = world.getBlockState(cutPos.up());
+		int aboveRadius = this.getRadius(stateAbove);
+		boolean isBranchAbove = TreeHelper.isBranch(stateAbove);
+		
+		if (isBranchAbove) {
+			this.setRadius(world, cutPos, currentRadius - 1, toolDir);
 		}
-		final float finalChance = chance;
+		
+		if (currentRadius - 1 <= (aboveRadius / 2) || currentRadius == 1) {
+			//Do the actual destruction
+			BranchDestructionData destroyData = destroyBranchFromNode(world, cutPos, toolDir, false);
 
-		//Build the final wood drop list taking chance into consideration
-		List<ItemStack> woodDropList = woodItems.stream().filter(i -> world.rand.nextFloat() <= finalChance).collect(Collectors.toList());
+			//Get all of the wood drops
+			ItemStack heldItem = entity.getHeldItemMainhand();
+			int fortune = EnchantmentHelper.getEnchantmentLevel(Enchantments.FORTUNE, heldItem);
+			float fortuneFactor = 1.0f + 0.25f * fortune;
+			float woodVolume = destroyData.woodVolume;// The amount of wood calculated from the body of the tree network
+			List<ItemStack> woodItems = getLogDrops(world, cutPos, destroyData.species, woodVolume * fortuneFactor);
 
-		//This will drop the EntityFallingTree into the world
-		EntityFallingTree.dropTree(world, destroyData, woodDropList, DestroyType.HARVEST);
+			if (entity.getActiveHand() == null) {//What the hell man? I trusted you!
+				entity.setActiveHand(EnumHand.MAIN_HAND);//Players do things with hands.
+			}
 
-		//Damage the axe by a prescribed amount
-		damageAxe(entity, heldItem, getRadius(state), woodVolume);
+			float chance = 1.0f;
+			//Fire the block harvesting event.  For An-Sar's PrimalCore mod :)
+			if (entity instanceof EntityPlayer) {
+				chance = net.minecraftforge.event.ForgeEventFactory.fireBlockHarvesting(woodItems, world, cutPos, state, fortune, chance, false, (EntityPlayer) entity);
+			}
+			final float finalChance = chance;
+
+			//Build the final wood drop list taking chance into consideration
+			List<ItemStack> woodDropList = woodItems.stream().filter(i -> world.rand.nextFloat() <= finalChance).collect(Collectors.toList());
+
+			//This will drop the EntityFallingTree into the world
+			EntityFallingTree.dropTree(world, destroyData, woodDropList, DestroyType.HARVEST);
+
+			//Damage the axe by a prescribed amount
+			damageAxe(entity, heldItem, getRadius(state), woodVolume);
+		}
 	}
 
 	// We override the standard behavior because we need to preserve the tree network structure to calculate
