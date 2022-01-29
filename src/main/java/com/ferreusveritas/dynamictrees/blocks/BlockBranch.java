@@ -1,5 +1,43 @@
 package com.ferreusveritas.dynamictrees.blocks;
 
+import java.util.*;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.material.EnumPushReaction;
+import net.minecraft.block.material.Material;
+import net.minecraft.block.properties.IProperty;
+import net.minecraft.block.properties.PropertyBool;
+import net.minecraft.block.properties.PropertyInteger;
+import net.minecraft.block.state.BlockFaceShape;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.monster.EntityCreeper;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Enchantments;
+import net.minecraft.init.Items;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemAxe;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.BlockPos.MutableBlockPos;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.Explosion;
+import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.World;
+import net.minecraftforge.common.property.IUnlistedProperty;
+import net.minecraftforge.common.property.Properties;
+
 import com.ferreusveritas.dynamictrees.ModBlocks;
 import com.ferreusveritas.dynamictrees.ModConfigs;
 import com.ferreusveritas.dynamictrees.api.IFutureBreakable;
@@ -19,52 +57,19 @@ import com.ferreusveritas.dynamictrees.util.BlockBounds;
 import com.ferreusveritas.dynamictrees.util.BranchDestructionData;
 import com.ferreusveritas.dynamictrees.util.SimpleVoxmap;
 import com.ferreusveritas.dynamictrees.util.SimpleVoxmap.Cell;
-import net.minecraft.block.Block;
-import net.minecraft.block.material.EnumPushReaction;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.properties.PropertyInteger;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.monster.EntityCreeper;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.init.Blocks;
-import net.minecraft.init.Enchantments;
-import net.minecraft.init.Items;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemAxe;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.BlockPos.MutableBlockPos;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Explosion;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.common.property.IUnlistedProperty;
-import net.minecraftforge.common.property.Properties;
-
-import javax.annotation.Nullable;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public abstract class BlockBranch extends Block implements ITreePart, IFutureBreakable {
 
 	public static final int RADMAX_NORMAL = 8;
 
 	public static final IUnlistedProperty[] CONNECTIONS = {
-		new Properties.PropertyAdapter<Integer>(PropertyInteger.create("radiusd", 0, 8)),
-		new Properties.PropertyAdapter<Integer>(PropertyInteger.create("radiusu", 0, 8)),
-		new Properties.PropertyAdapter<Integer>(PropertyInteger.create("radiusn", 0, 8)),
-		new Properties.PropertyAdapter<Integer>(PropertyInteger.create("radiuss", 0, 8)),
-		new Properties.PropertyAdapter<Integer>(PropertyInteger.create("radiusw", 0, 8)),
-		new Properties.PropertyAdapter<Integer>(PropertyInteger.create("radiuse", 0, 8))
+		new Properties.PropertyAdapter<>(PropertyInteger.create("radiusd", 0, 8)),
+		new Properties.PropertyAdapter<>(PropertyInteger.create("radiusu", 0, 8)),
+		new Properties.PropertyAdapter<>(PropertyInteger.create("radiusn", 0, 8)),
+		new Properties.PropertyAdapter<>(PropertyInteger.create("radiuss", 0, 8)),
+		new Properties.PropertyAdapter<>(PropertyInteger.create("radiusw", 0, 8)),
+		new Properties.PropertyAdapter<>(PropertyInteger.create("radiuse", 0, 8)),
+		new Properties.PropertyAdapter<>(PropertyBool.create("debarked"))
 	};
 
 	private TreeFamily tree = TreeFamily.NULLFAMILY; //The tree this branch type creates
@@ -73,7 +78,7 @@ public abstract class BlockBranch extends Block implements ITreePart, IFutureBre
 		super(material);
 		setUnlocalizedName(name);
 		setRegistryName(name);
-		//setHarvestLevel("axe", 0);
+		setHarvestLevel("axe", 0);
 	}
 
 	public IProperty<?>[] getIgnorableProperties() {
@@ -406,7 +411,8 @@ public abstract class BlockBranch extends Block implements ITreePart, IFutureBre
 			toolDir = EnumFacing.DOWN;//Make everything better
 		}
 		
-		if (entity.getHeldItem(EnumHand.MAIN_HAND).isEmpty()) {
+		if (state.getBlock() instanceof BlockBranchBasic && entity.getHeldItem(EnumHand.MAIN_HAND).isEmpty()) {
+			entity.world.playSound(null, entity.getPosition(), SoundEvents.ENTITY_ZOMBIE_BREAK_DOOR_WOOD, SoundCategory.AMBIENT, 0.8F, 1.0F);
 			world.spawnEntity(new EntityItem(world, cutPos.getX(), cutPos.getY(), cutPos.getZ(), new ItemStack(Items.STICK)));
 		}
 		

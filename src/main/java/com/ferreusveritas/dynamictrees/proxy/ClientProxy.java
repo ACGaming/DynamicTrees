@@ -79,7 +79,7 @@ public class ClientProxy extends CommonProxy {
 
 		Function<ResourceLocation, TextureAtlasSprite> bakedTextureGetter = location -> Minecraft.getMinecraft().getTextureMapBlocks().getAtlasSprite(location.toString());
 
-		for (TreeFamily family : Species.REGISTRY.getValues().stream().map(s -> s.getFamily()).distinct().collect(Collectors.toList())) {
+		for (TreeFamily family : Species.REGISTRY.getValues().stream().map(Species::getFamily).distinct().collect(Collectors.toList())) {
 			family.woodColor = 0xFFF1AE;//For roots
 			if (family != TreeFamily.NULLFAMILY) {
 				IBlockState state = family.getPrimitiveLog();
@@ -200,15 +200,11 @@ public class ClientProxy extends CommonProxy {
 			ModBlocks.blockRootyDirt, ModBlocks.blockRootyDirtSpecies, ModBlocks.blockRootySand, ModBlocks.blockRootyDirtFake);
 
 		//Register Sapling Colorizer
-		ModelHelper.regColorHandler(ModBlocks.blockDynamicSapling, (state, access, pos, tintIndex) -> {
-			return isValid(access, pos) ? ModBlocks.blockDynamicSapling.getSpecies(access, pos, state).saplingColorMultiplier(state, access, pos, tintIndex) : white;
-		});
+		ModelHelper.regColorHandler(ModBlocks.blockDynamicSapling, (state, access, pos, tintIndex) -> isValid(access, pos) ? ModBlocks.blockDynamicSapling.getSpecies(access, pos, state).saplingColorMultiplier(state, access, pos, tintIndex) : white);
 
 		//Register Bonsai Pot Colorizer
-		ModelHelper.regColorHandler(ModBlocks.blockBonsaiPot, (state, access, pos, tintIndex) -> {
-			return isValid(access, pos) && (state.getBlock() instanceof BlockBonsaiPot)
-				? ModBlocks.blockBonsaiPot.getSpecies(access, pos).saplingColorMultiplier(state, access, pos, tintIndex) : white;
-		});
+		ModelHelper.regColorHandler(ModBlocks.blockBonsaiPot, (state, access, pos, tintIndex) -> isValid(access, pos) && (state.getBlock() instanceof BlockBonsaiPot)
+			? ModBlocks.blockBonsaiPot.getSpecies(access, pos).saplingColorMultiplier(state, access, pos, tintIndex) : white);
 
 		//ITEMS
 

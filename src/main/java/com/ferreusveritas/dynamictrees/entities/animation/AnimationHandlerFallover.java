@@ -2,7 +2,6 @@ package com.ferreusveritas.dynamictrees.entities.animation;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Predicates;
@@ -11,7 +10,6 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
-import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntitySelectors;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.SoundCategory;
@@ -111,7 +109,7 @@ public class AnimationHandlerFallover implements IAnimationHandler {
 			fallSpeed *= -AnimationConstants.TREE_ELASTICITY;//bounce with elasticity
 			entity.landed = Math.abs(fallSpeed) < 0.02f;//The entity has landed if after a bounce it has little velocity
 			if (!fallSound) {
-				entity.world.playSound(null, entity.getPosition(), ModSoundEvents.TREE_LANDING, SoundCategory.AMBIENT, 0.8F, entity.world.rand.nextFloat());
+				entity.world.playSound(null, entity.getPosition(), ModSoundEvents.TREE_LANDING, SoundCategory.AMBIENT, 1.0F, entity.world.rand.nextFloat());
 				fallSound = true;
 			}
 		}
